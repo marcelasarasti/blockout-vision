@@ -230,6 +230,24 @@
     });
   });
 
+  // ---------------- integración ----------------
+  test('integración: escena → geometría → proyección → primitivas 2D', () => {
+    let s = S.createScene();
+    s = S.applyAction(s, { type: 'SELECT_PIECE', shapeId: 'Tr' });
+    s = S.applyAction(s, { type: 'ROTATE', axis: 'y', dir: 1 });
+    const cam = CAM.buildCamera(CAM.defaultCameraParams(s.config));
+    const out = PR.project(S.getGeometry(s), cam);
+    assert(out.primitives.some((q) => q.objectId === 'active'), 'la pieza activa se dibuja');
+    assert(out.primitives.some((q) => q.objectId === 'container'), 'el contenedor se dibuja');
+    // Coherencia: cada vértice de la pieza proyectado por la traza coincide con P·M·X.
+    const obj = S.getGeometry(s).objects.find((o) => o.id === 'active');
+    const PM = L.matMul(cam.P, obj.M);
+    obj.vertices.forEach((v) => {
+      const h = L.matVec(PM, [...v, 1]);
+      closeVec(PR.tracePoint(cam, obj.M, v).uv, [h[0] / h[2], h[1] / h[2]], 1e-9);
+    });
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];

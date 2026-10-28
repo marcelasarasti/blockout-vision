@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blockout · Cámara móvil</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">BLOCKOUT</span>
+        <span class="tag">desde una cámara móvil · geometría proyectiva</span>
+      </div>
+      <div class="toolbar">
+        <button id="btn-demo" title="Modo de demostración (P)">▶ Demo <kbd>P</kbd></button>
+        <button id="btn-victory" title="Animación de victoria (V)">★ Victoria <kbd>V</kbd></button>
+        <button id="btn-wire" title="Alternar caras / solo aristas (F)">◇ Aristas <kbd>F</kbd></button>
+        <button id="btn-reset-scene" title="Reiniciar escena (Retroceso)">⟲ Escena</button>
+        <button id="btn-reset-cam" title="Restablecer vista (R)">⌖ Vista <kbd>R</kbd></button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="view" aria-label="Vista proyectada de la escena 3D"></canvas>
+      <div class="status-strip" id="status-strip">Listo</div>
+    </main>
+
+    <aside class="panel">
+      <section>
+        <h2>Pieza activa</h2>
+        <div class="piece-grid" id="piece-grid"></div>
+        <div class="pad">
+          <div class="pad-group">
+            <span>Trasladar</span>
+            <button data-act='{"type":"TRANSLATE","delta":[-1,0,0]}'>−X</button>
+            <button data-act='{"type":"TRANSLATE","delta":[1,0,0]}'>+X</button>
+            <button data-act='{"type":"TRANSLATE","delta":[0,-1,0]}'>−Y</button>
+            <button data-act='{"type":"TRANSLATE","delta":[0,1,0]}'>+Y</button>
+            <button data-act='{"type":"TRANSLATE","delta":[0,0,-1]}'>−Z</button>
+            <button data-act='{"type":"TRANSLATE","delta":[0,0,1]}'>+Z</button>
+          </div>
+          <div class="pad-group">
+            <span>Rotar 90°</span>
+            <button data-act='{"type":"ROTATE","axis":"x","dir":1}'>↻X</button>
+            <button data-act='{"type":"ROTATE","axis":"x","dir":-1}'>↺X</button>
+            <button data-act='{"type":"ROTATE","axis":"y","dir":1}'>↻Y</button>
+            <button data-act='{"type":"ROTATE","axis":"y","dir":-1}'>↺Y</button>
+            <button data-act='{"type":"ROTATE","axis":"z","dir":1}'>↻Z</button>
+            <button data-act='{"type":"ROTATE","axis":"z","dir":-1}'>↺Z</button>
+          </div>
+          <button class="wide" data-act='{"type":"DROP"}'>⤓ Soltar pieza <kbd>Espacio</kbd></button>
+        </div>
+        <div class="kv" id="piece-info"></div>
+        <div class="mats">
+          <div><h3>R (rotación de la pieza)</h3><pre id="mat-Rp"></pre></div>
+          <div><h3>M = T(p)·R·T(−pivote)</h3><pre id="mat-M"></pre></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Cámara</h2>
+        <label class="slider"><span>Azimut</span><input type="range" id="cam-azimuth" min="-180" max="180" step="1"><output id="o-azimuth"></output></label>
+        <label class="slider"><span>Elevación</span><input type="range" id="cam-elevation" min="-85" max="89" step="1"><output id="o-elevation"></output></label>
+        <label class="slider"><span>Distancia</span><input type="range" id="cam-distance" min="0.5" max="80" step="0.1"><output id="o-distance"></output></label>
+        <label class="slider"><span>Campo visión</span><input type="range" id="cam-fovY" min="8" max="120" step="0.5"><output id="o-fovY"></output></label>
+        <div class="kv" id="cam-info"></div>
+        <div class="mats">
+          <div><h3>K (intrínsecos, px)</h3><pre id="mat-K"></pre></div>
+          <div class="full"><h3>[R | t] (mundo → cámara, 3×4)</h3><pre id="mat-Rt"></pre></div>
+          <div class="full"><h3>P = K[R | t] (3×4)</h3><pre id="mat-P"></pre></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Traza de un punto <small>objeto → pantalla</small></h2>
+        <div class="row">
+          <button id="trace-prev">◀</button>
+          <span id="trace-label" class="grow"></span>
+          <button id="trace-next">▶ <kbd>T</kbd></button>
+        </div>
+        <table class="trace" id="trace-table"></table>
+      </section>
+
+      <section>
+        <h2>Homografía del fondo <small>plano Z = 0</small></h2>
+        <p class="note">Fija la vista 1, mueve la cámara y compara: <b class="g">○</b> proyección real ·
+          <b>×</b> H·x₁. En el fondo coinciden; fuera del plano <b class="o">○</b>–<b class="r">×</b> no.</p>
+        <div class="row">
+          <button id="h-capture">Fijar vista 1 <kbd>H</kbd></button>
+          <button id="h-clear">Quitar</button>
+        </div>
+        <div id="h-out" class="h-out"></div>
+      </section>
+
+      <section>
+        <h2>Controles</h2>
+        <dl class="keys">
+          <dt>← → ↑ ↓</dt><dd>trasladar en X/Y (relativo a la vista)</dd>
+          <dt>Mayús+↑↓, RePág/AvPág</dt><dd>trasladar en Z</dd>
+          <dt>Q/A · W/S · E/D</dt><dd>rotar ±90° en X · Y · Z</dd>
+          <dt>1 – 8</dt><dd>seleccionar pieza</dd>
+          <dt>Espacio</dt><dd>soltar pieza</dd>
+          <dt>Arrastrar ratón · J/L · I/K</dt><dd>orbitar cámara</dd>
+          <dt>Rueda · U/O</dt><dd>distancia de observación</dd>
+          <dt>Mayús+rueda · N/M</dt><dd>campo de visión (focal)</dd>
+          <dt>R</dt><dd>restablecer vista</dd>
+          <dt>F · T · H</dt><dd>aristas · traza · homografía</dd>
+          <dt>V · P</dt><dd>victoria · demostración</dd>
+        </dl>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Orden de carga: núcleo matemático → escena (A) → cámara/proyección (B) → aplicación (C).
+       Scripts clásicos (no módulos ES) para que funcione abriendo el archivo, sin servidor. -->
+  <script src="js/math/linalg.js"></script>
+  <script src="js/scene/pieces.js"></script>
+  <script src="js/scene/scene.js"></script>
+  <script src="js/camera/camera.js"></script>
+  <script src="js/camera/projection.js"></script>
+  <script src="js/camera/homography.js"></script>
+  <script src="js/app/renderer.js"></script>
+  <script src="js/app/input.js"></script>
+  <script src="js/app/main.js"></script>
+</body>
+</html>
