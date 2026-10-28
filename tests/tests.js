@@ -248,6 +248,47 @@
     });
   });
 
+  // ---------------- animación y demostración ----------------
+  test('victoria: poses rígidas, continuas y sin coordenadas de pantalla', () => {
+    const V = BO.victory, cfg = S.DEFAULT_CONFIG;
+    let prev = null;
+    for (let t = 0; t <= V.DURATION; t += 1 / 60) {
+      const poses = V.posesAt(t, cfg);
+      poses.forEach((p) => assert(L.isRotation(p.pose.rotation, 1e-9), 'rotación rígida'));
+      if (prev) poses.forEach((p, i) => assert(L.norm(L.sub(p.pose.position, prev[i].pose.position)) < 0.5, 'salto de posición en t=' + t));
+      prev = poses;
+    }
+    assert(V.posesAt(V.DURATION + 0.1, cfg) === null, 'termina');
+    // Las poses entran por la interfaz de la escena.
+    const s = S.applyAction(S.createScene(), { type: 'SET_ANIMATION', pieces: V.posesAt(4, cfg) });
+    assert(S.getGeometry(s).objects.filter((o) => o.kind === 'anim').length === P.PIECES.length);
+  });
+  test('demostración: dos reproducciones producen exactamente la misma secuencia', () => {
+    const D = BO.demo, V = BO.victory;
+    const runOnce = () => {
+      let scene = S.createScene(), cam = CAM.defaultCameraParams(scene.config), vt = null;
+      const log = [];
+      const hooks = {
+        dispatch: (a) => { scene = S.applyAction(scene, a); },
+        getCamera: () => Object.assign({}, cam),
+        setCamera: (p) => { cam = CAM.updateCameraParams(p, {}); },
+        defaultCamera: () => CAM.defaultCameraParams(scene.config),
+        startVictory: () => { vt = 0; },
+      };
+      const player = D.createPlayer();
+      while (!player.done) {
+        D.step(player, hooks);
+        if (vt !== null) { const poses = V.posesAt(vt, scene.config); if (poses) hooks.dispatch({ type: 'SET_ANIMATION', pieces: poses }); else vt = null; if (vt !== null) vt += D.STEP; }
+        if (Math.round(player.time * 60) % 30 === 0) log.push(JSON.stringify([scene.active, scene.placed, cam, scene.animation && scene.animation.pieces[0].pose]));
+      }
+      return { log, scene };
+    };
+    const a = runOnce(), b = runOnce();
+    assert(a.log.length > 50, 'muestras suficientes');
+    assert(JSON.stringify(a.log) === JSON.stringify(b.log), 'secuencias idénticas');
+    assert(a.scene.status.piecesPlaced === 3, 'la demostración coloca 3 piezas');
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];
