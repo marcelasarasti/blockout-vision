@@ -85,7 +85,7 @@ Camera = { params, C, K, R, t, Rt, P, f, fovY, width, height, near }
 // Salida de la proyección (B → C), ordenada de lejos a cerca
 DrawPrimitives2D = { primitives: [
     { type:'polygon', points:[[u,v],...], depth, color, normalWorld, objectId }
-  | { type:'line', a:[u,v], b:[u,v], depth, style, objectId } ],
+  | { type:'line', a:[u,v], b:[u,v], depth, style, color, objectId } ],
   stats: { faces, culled, clipped, discarded, lines } }
 ```
 
@@ -119,6 +119,7 @@ Mover la cámara solo cambia `CameraParams`; nunca modifica `Scene` ni las coord
 | Función | Entradas | Salida | Errores |
 |---|---|---|---|
 | `buildCamera(params)` | `CameraParams` | `Camera` | `distance ≤ 0`, `near ≤ 0`, `fovY ∉ (0,180)` → `Error`; la elevación se limita a ±89° |
+| `updateCameraParams(params, change)` | `CameraParams`, `{dAzimuth, dElevation, zoom, dFov, set}` | **nuevos** `CameraParams` con límites aplicados | — |
 | `project(geom, camera, {faces})` | `Geometry3D`, `Camera` | `DrawPrimitives2D` | nunca devuelve NaN: recorta en `z_c = near` y descarta lo que queda detrás |
 | `tracePoint(camera, M, X)` | `Camera`, 4×4, `[x,y,z]` | `{Xh, Xw, Xc, lambdaUV, lambda, uv \| null, visible}` | `uv = null` si `z_c < near` |
 | `projectWorldPoint(camera, Xw)` | `Camera`, `[x,y,z]` | `[u,v] \| null` | `null` detrás del plano cercano |
@@ -188,3 +189,5 @@ C dibuja líneas sin estilos. La primera integración (hito 2) se hace con esas 
 |---|---|---|---|
 | 2026-10-27 | Versión inicial | A, B, C | diseño |
 | 2026-10-27 | `CameraParams.focal` opcional (en píxeles) para el ejemplo compartido y para rotaciones puras | B, pruebas | cámara |
+| 2026-10-27 | `DrawPrimitives2D.line.color` (color del objeto para el modo aristas) | B, C | interfaz |
+| 2026-10-27 | `camera.updateCameraParams` centraliza los límites de los controles | B, C | interfaz |

@@ -94,10 +94,32 @@
     return { params: p, C, K, R, t, Rt, P: Pm, f, fovY: fovFromFocal(p.height, f), width: p.width, height: p.height, near: p.near };
   }
 
+  /** Límites de los controles de cámara. */
+  const LIMITS = { elevation: [-85, 89], distance: [0.5, 80], fovY: [8, 120] };
+  const clamp = (x, [a, b]) => Math.max(a, Math.min(b, x));
+
+  /**
+   * Devuelve NUEVOS parámetros tras un cambio de cámara (los parámetros de entrada no se modifican).
+   * change: { dAzimuth, dElevation, zoom (factor multiplicativo de la distancia), dFov, set:{...} }
+   */
+  function updateCameraParams(params, change) {
+    const p = Object.assign({}, params, change.set || {});
+    if (change.dAzimuth) p.azimuth += change.dAzimuth;
+    p.azimuth = ((p.azimuth + 180) % 360 + 360) % 360 - 180;
+    if (change.dElevation) p.elevation += change.dElevation;
+    if (change.zoom) p.distance *= change.zoom;
+    if (change.dFov) p.fovY += change.dFov;
+    p.elevation = clamp(p.elevation, LIMITS.elevation);
+    p.distance = clamp(p.distance, LIMITS.distance);
+    p.fovY = clamp(p.fovY, LIMITS.fovY);
+    delete p.focal; delete p.C; delete p.R;
+    return p;
+  }
+
   /** Cámara con el MISMO centro y otra orientación (para el experimento de rotación pura). */
   function rotatedCamera(cam, extraR) {
     return buildCamera(Object.assign({}, cam.params, { C: cam.C, R: L.matMul(extraR, cam.R), focal: cam.f }));
   }
 
-  BO.camera = { defaultCameraParams, cameraCenter, focalFromFov, fovFromFocal, intrinsics, lookAtRotation, buildCamera, rotatedCamera };
+  BO.camera = { LIMITS, defaultCameraParams, cameraCenter, focalFromFov, fovFromFocal, intrinsics, lookAtRotation, buildCamera, rotatedCamera, updateCameraParams };
 })(globalThis.BO = globalThis.BO || {});

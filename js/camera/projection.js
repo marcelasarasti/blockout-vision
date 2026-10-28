@@ -114,7 +114,7 @@
           if (seg[0] !== Xc[e.a] || seg[1] !== Xc[e.b]) stats.clipped++;
           prims.push({
             type: 'line', a: cameraToImage(camera, seg[0]), b: cameraToImage(camera, seg[1]),
-            depth: (seg[0][2] + seg[1][2]) / 2, style: e.style, objectId: obj.id,
+            depth: (seg[0][2] + seg[1][2]) / 2, style: e.style, color: obj.color, objectId: obj.id,
           });
           stats.lines++;
         }
