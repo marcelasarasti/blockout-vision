@@ -69,6 +69,54 @@
     });
   });
 
+  // ---------------- escena ----------------
+  test('escena: las rotaciones conservan la rigidez y la rejilla', () => {
+    let s = S.createScene();
+    S.applyAction(s, { type: 'SELECT_PIECE', shapeId: 'Td' });
+    s = S.applyAction(s, { type: 'SELECT_PIECE', shapeId: 'Td' });
+    const dists = (cells) => cells.flatMap((a, i) => cells.slice(i + 1).map((b) => L.norm(L.sub(a, b)))).sort();
+    const ref = dists(P.getPiece('Td').cells);
+    const seq = ['x', 'y', 'z', 'x', 'z', 'y', 'y', 'x'];
+    seq.forEach((ax, i) => {
+      s = S.applyAction(s, { type: 'ROTATE', axis: ax, dir: i % 2 ? -1 : 1 });
+      const cells = S.pieceCells(s.active.shapeId, s.active.pose);
+      closeVec(dists(cells), ref, 1e-9, 'distancias');
+      assert(L.isRotation(s.active.pose.rotation), 'R rígida');
+      assert(s.active.pose.rotation.flat().every(Number.isInteger), 'sin deriva numérica');
+    });
+  });
+  test('escena: cuatro rotaciones de 90° devuelven la pieza a su lugar', () => {
+    let s = S.applyAction(S.createScene(), { type: 'TRANSLATE', delta: [0, 0, -4] });
+    const before = JSON.stringify(S.pieceCells(s.active.shapeId, s.active.pose));
+    for (let i = 0; i < 4; i++) s = S.applyAction(s, { type: 'ROTATE', axis: 'x', dir: 1 });
+    assert(JSON.stringify(S.pieceCells(s.active.shapeId, s.active.pose)) === before);
+  });
+  test('escena: los límites rechazan salir del contenedor sin lanzar excepción', () => {
+    let s = S.createScene();
+    for (let i = 0; i < 10; i++) s = S.applyAction(s, { type: 'TRANSLATE', delta: [1, 0, 0] });
+    assert(!s.status.ok, 'el último movimiento debe rechazarse');
+    S.pieceCells(s.active.shapeId, s.active.pose).forEach((c) => assert(c[0] < s.config.width));
+  });
+  test('escena: soltar fija los cubos en el fondo y completar una capa la elimina', () => {
+    let s = S.createScene({ width: 4, depth: 4, height: 6 });
+    // 4 barras I en Y = 0..3 llenan la capa Z = 0 de un contenedor 4×4.
+    for (let y = 0; y < 4; y++) {
+      s = S.applyAction(s, { type: 'SELECT_PIECE', shapeId: 'I' });
+      const dy = y - Math.floor(s.active.pose.position[1]);
+      s = S.applyAction(s, { type: 'TRANSLATE', delta: [0, dy, 0] });
+      s = S.applyAction(s, { type: 'DROP' });
+    }
+    assert(s.status.layersCleared === 1, 'una capa eliminada');
+    assert(s.placed.length === 0, 'contenedor vacío tras eliminar la capa');
+  });
+  test('escena: applyAction no modifica la escena de entrada', () => {
+    const s = S.createScene();
+    const snap = JSON.stringify(s);
+    S.applyAction(s, { type: 'ROTATE', axis: 'z', dir: 1 });
+    S.applyAction(s, { type: 'DROP' });
+    assert(JSON.stringify(s) === snap);
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];
