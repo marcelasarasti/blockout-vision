@@ -77,7 +77,7 @@ Geometry3D = { config, objects: [ {
 } ] }
 
 // Parámetros de cámara (propiedad del módulo C, interpretados por B)
-CameraParams = { target:[x,y,z], azimuth°, elevation°, distance, fovY°, width, height, near }
+CameraParams = { target:[x,y,z], azimuth°, elevation°, distance, fovY° | focal(px), width, height, near }
 
 // Cámara construida (B)
 Camera = { params, C, K, R, t, Rt, P, f, fovY, width, height, near }
@@ -187,3 +187,4 @@ C dibuja líneas sin estilos. La primera integración (hito 2) se hace con esas 
 | Fecha | Cambio | Módulos | PR |
 |---|---|---|---|
 | 2026-10-27 | Versión inicial | A, B, C | diseño |
+| 2026-10-27 | `CameraParams.focal` opcional (en píxeles) para el ejemplo compartido y para rotaciones puras | B, pruebas | cámara |
