@@ -172,6 +172,38 @@
     assert(out.stats.culled > 0, 'algunas caras deben estar de espaldas');
   });
 
+  // ---------------- homografía ----------------
+  const twoCams = () => {
+    const p = CAM.defaultCameraParams(S.DEFAULT_CONFIG);
+    return [CAM.buildCamera(p), CAM.buildCamera(Object.assign({}, p, { azimuth: p.azimuth + 55, elevation: 70, distance: 18, fovY: 55 }))];
+  };
+  test('homografía: exacta en el fondo (≥ 4 puntos en posición general)', () => {
+    const [c1, c2] = twoCams();
+    const pts = HG.defaultTestPoints(S.DEFAULT_CONFIG);
+    assert(HG.generalPosition(pts.plane), 'sin tres colineales');
+    const r = HG.runExperiment(c1, c2, pts.plane, pts.off);
+    assert(r.onPlane.max < 1e-9, 'error en el plano ' + r.onPlane.max);
+    assert(r.dltRelDiff < 1e-8, 'DLT coincide con la H analítica ' + r.dltRelDiff);
+  });
+  test('homografía: falla fuera del plano cuando cambia el centro de la cámara', () => {
+    const [c1, c2] = twoCams();
+    const pts = HG.defaultTestPoints(S.DEFAULT_CONFIG);
+    const r = HG.runExperiment(c1, c2, pts.plane, pts.off);
+    assert(r.baseline > 1, 'hay línea base');
+    assert(r.offPlane.max > 20, 'error grande fuera del plano ' + r.offPlane.max);
+  });
+  test('homografía: con rotación pura (mismo centro) sirve para todos los puntos', () => {
+    const [c1] = twoCams();
+    const c2 = CAM.rotatedCamera(c1, L.rotAxis('y', 0.12));
+    const H = HG.homographyPureRotation(c1, c2);
+    const pts = HG.defaultTestPoints(S.DEFAULT_CONFIG);
+    pts.off.concat(pts.plane.map((q) => [q[0], q[1], 0])).forEach((X) => {
+      const p1 = PR.projectWorldPoint(c1, X), p2 = PR.projectWorldPoint(c2, X);
+      const e = Math.hypot(...L.sub(HG.applyH(H, p1), p2));
+      assert(e < 1e-8, 'error ' + e);
+    });
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];
