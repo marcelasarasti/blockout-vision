@@ -185,6 +185,32 @@
     assert(r.onPlane.max < 1e-9, 'error en el plano ' + r.onPlane.max);
     assert(r.dltRelDiff < 1e-8, 'DLT coincide con la H analítica ' + r.dltRelDiff);
   });
+  test('homografía: columnas de P coinciden con K2(R + t nᵀ/d)K1⁻¹', () => {
+    const [c1, c2] = twoCams();
+    const A = HG.homographyBetweenViews(c1, c2), B = HG.homographyFromPlane(c1, c2, [0, 0, 1], 0);
+    const diff = L.frobenius(A.map((r, i) => r.map((x, j) => x - B[i][j]))) / L.frobenius(A);
+    assert(diff < 1e-12, 'diferencia relativa ' + diff);
+  });
+  test('homografía: el error fuera del plano es el paralaje  x2 ~ H x1 + ρ·K2 t', () => {
+    const [c1, c2] = twoCams();
+    const H = HG.homographyBetweenViews(c1, c2);
+    const R = L.matMul(c2.R, L.transpose(c1.R)), t = L.sub(c2.t, L.matVec(R, c1.t));
+    const e2 = L.matVec(c2.K, t);                       // epipolo (homogéneo) en la vista 2
+    const n = L.matVec(c1.R, [0, 0, 1]), d = L.dot(n, c1.t);
+    // H sin normalizar (la escala importa al sumar el término de paralaje)
+    const A = R.map((row, i) => row.map((x, j) => x + (t[i] * n[j]) / d));
+    const Hu = L.matMul(L.matMul(c2.K, A), L.inv3(c1.K));
+    [[1, 1, 4], [4, 2, 7], [2.5, 3, 1]].forEach((X) => {
+      const Xc1 = L.matVec(c1.Rt, [...X, 1]);
+      const x1 = L.matVec(c1.K, Xc1).map((v) => v / Xc1[2]);
+      const rho = (d - L.dot(n, Xc1)) / (d * Xc1[2]);
+      const pred = L.add(L.matVec(Hu, x1), L.scale(e2, rho));
+      const real = PR.projectWorldPoint(c2, X);
+      closeVec([pred[0] / pred[2], pred[1] / pred[2]], real, 1e-8, 'paralaje');
+      const viaH = HG.applyH(H, x1.slice(0, 2));
+      assert(Math.hypot(viaH[0] - real[0], viaH[1] - real[1]) > 1, 'sin el término de paralaje hay error');
+    });
+  });
   test('homografía: falla fuera del plano cuando cambia el centro de la cámara', () => {
     const [c1, c2] = twoCams();
     const pts = HG.defaultTestPoints(S.DEFAULT_CONFIG);

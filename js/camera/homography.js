@@ -25,6 +25,23 @@
     return L.normalizeBy(L.matMul(planeToImage(cam2.P), L.inv3(planeToImage(cam1.P))), 2, 2);
   }
 
+  /**
+   * Forma "de libro" de la homografía inducida por un plano (Hartley–Zisserman, cap. 13):
+   *   plano del mundo  n_wᵀ X = d_w ;   en la cámara 1:  nᵀ X_c1 = d  con  n = R1 n_w,  d = d_w + nᵀ t1
+   *   movimiento relativo X_c2 = R X_c1 + t,  R = R2 R1ᵀ,  t = t2 − R t1
+   *   ⇒  H21 = K2 (R + t nᵀ / d) K1⁻¹
+   * Sirve para comprobar de forma independiente la H calculada con columnas de P.
+   */
+  function homographyFromPlane(cam1, cam2, nWorld = [0, 0, 1], dWorld = 0) {
+    const n = L.matVec(cam1.R, nWorld);
+    const d = dWorld + L.dot(n, cam1.t);
+    if (Math.abs(d) < 1e-12) throw new Error('El centro óptico de la vista 1 está sobre el plano');
+    const R = L.matMul(cam2.R, L.transpose(cam1.R));
+    const t = L.sub(cam2.t, L.matVec(R, cam1.t));
+    const A = R.map((row, i) => row.map((x, j) => x + (t[i] * n[j]) / d));
+    return L.normalizeBy(L.matMul(L.matMul(cam2.K, A), L.inv3(cam1.K)), 2, 2);
+  }
+
   /** H inducida por una rotación pura (mismo centro óptico): K2 R2 R1ᵀ K1⁻¹. */
   function homographyPureRotation(cam1, cam2) {
     return L.normalizeBy(L.matMul(L.matMul(cam2.K, L.matMul(cam2.R, L.transpose(cam1.R))), L.inv3(cam1.K)), 2, 2);
@@ -122,7 +139,7 @@
   }
 
   BO.homography = {
-    planeToImage, homographyBetweenViews, homographyPureRotation, applyH,
+    planeToImage, homographyBetweenViews, homographyFromPlane, homographyPureRotation, applyH,
     generalPosition, estimateHomographyDLT, runExperiment, defaultTestPoints,
   };
 })(globalThis.BO = globalThis.BO || {});
