@@ -39,7 +39,12 @@ en la revisión de cada PR.**
 
 ## Errores significativos encontrados y corregidos
 
-_(Se completa a medida que se revisa el código generado.)_
+| Error | Cómo se detectó | Corrección |
+|---|---|---|
+| La matriz `[R \| t]` y la `H` estimada por DLT se desbordaban del panel lateral | captura de pantalla | se muestran a lo ancho del panel |
+
+En la sesión de generación no aparecieron errores matemáticos: las pruebas pasaron en la primera
+ejecución. Esto **no** sustituye la revisión humana.
 
 _(Agreguen aquí los errores que encuentren en sus revisiones.)_
 
