@@ -117,6 +117,61 @@
     assert(JSON.stringify(s) === snap);
   });
 
+  // ---------------- cámara y proyección ----------------
+  const exampleCam = () => CAM.buildCamera({ target: [0, 0, 0], azimuth: 0, elevation: 0, distance: 10, focal: 500, width: 800, height: 600, near: 0.1 });
+  test('cámara: ejemplo compartido de docs/INTERFACES.md', () => {
+    const cam = exampleCam();
+    closeVec(cam.C, [10, 0, 0], 1e-12, 'C');
+    [[0, 1, 0], [0, 0, -1], [-1, 0, 0]].forEach((r, i) => closeVec(cam.R[i], r, 1e-12, 'R'));
+    closeVec(cam.t, [0, 0, 10], 1e-12, 't');
+    const M = L.translation4([1, 2, 3]);
+    const tr = PR.tracePoint(cam, M, [0, 0, 0]);
+    closeVec(tr.Xw, [1, 2, 3, 1], 1e-12, 'M·X');
+    closeVec(tr.Xc, [2, -3, 9], 1e-12, 'Xc');
+    close(tr.lambda, 9, 1e-12, 'λ');
+    closeVec(tr.uv, [400 + 1000 / 9, 300 - 500 / 3], 1e-9, '(u,v)');
+  });
+  test('cámara: R es rotación propia y P = K[R|t] en varias poses', () => {
+    for (const az of [-170, -62, 0, 45, 179]) for (const el of [-80, 0, 48, 89]) {
+      const cam = CAM.buildCamera(Object.assign(CAM.defaultCameraParams(S.DEFAULT_CONFIG), { azimuth: az, elevation: el }));
+      assert(L.isRotation(cam.R), 'R propia');
+      const Xc = L.matVec(cam.Rt, [...cam.C, 1]);
+      closeVec(Xc, [0, 0, 0], 1e-9, 'el centro óptico va al origen de la cámara');
+      const tgt = L.matVec(cam.Rt, [...cam.params.target, 1]);
+      close(tgt[0], 0, 1e-9); close(tgt[1], 0, 1e-9); // el objetivo cae en el eje óptico
+    }
+  });
+  test('cámara: mover la cámara no altera las coordenadas del mundo', () => {
+    const s = S.createScene();
+    const g = S.getGeometry(s);
+    const before = JSON.stringify(g);
+    const p = CAM.defaultCameraParams(s.config);
+    [p, Object.assign({}, p, { azimuth: 100, distance: 5, fovY: 80 })].forEach((pp) => PR.project(g, CAM.buildCamera(pp)));
+    assert(JSON.stringify(g) === before);
+  });
+  test('proyección: puntos detrás de la cámara o en el plano cercano no producen NaN', () => {
+    const s = S.createScene();
+    const g = S.getGeometry(s);
+    const p = CAM.defaultCameraParams(s.config);
+    // La cámara dentro del contenedor: buena parte de la escena queda detrás.
+    const cam = CAM.buildCamera(Object.assign({}, p, { distance: 0.6, elevation: 10 }));
+    const out = PR.project(g, cam);
+    assert(out.stats.clipped + out.stats.discarded > 0, 'debe haber recortes');
+    out.primitives.forEach((q) => {
+      const pts = q.type === 'line' ? [q.a, q.b] : q.points;
+      pts.forEach((u) => assert(Number.isFinite(u[0]) && Number.isFinite(u[1]), 'coordenadas finitas'));
+      assert(q.depth >= cam.near - 1e-12, 'profundidad ≥ near');
+    });
+    assert(PR.projectWorldPoint(cam, cam.C) === null, 'el centro óptico no es proyectable');
+  });
+  test('proyección: orden del pintor y caras traseras eliminadas', () => {
+    const s = S.createScene();
+    const cam = CAM.buildCamera(CAM.defaultCameraParams(s.config));
+    const out = PR.project(S.getGeometry(s), cam);
+    for (let i = 1; i < out.primitives.length; i++) assert(out.primitives[i - 1].depth >= out.primitives[i].depth);
+    assert(out.stats.culled > 0, 'algunas caras deben estar de espaldas');
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];
