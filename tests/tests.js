@@ -35,6 +35,40 @@
     closeVec(L.matVec(L.rot90('z', 1), [1, 0, 0]), [0, 1, 0], 0, 'Rz(+90)·x = y');
   });
 
+  // ---------------- piezas ----------------
+  test('piezas: ≥ 5 distintas, ≥ 2 no planarias, celdas conexas', () => {
+    assert(P.PIECES.length >= 5);
+    assert(P.PIECES.filter((p) => !p.planar).length >= 2);
+    P.PIECES.forEach((p) => {
+      const zs = new Set(p.cells.map((c) => c[2])), ys = new Set(p.cells.map((c) => c[1])), xs = new Set(p.cells.map((c) => c[0]));
+      const isPlanar = zs.size === 1 || ys.size === 1 || xs.size === 1;
+      assert(isPlanar === p.planar, p.id + ': indicador planar coherente');
+    });
+  });
+  test('piezas: la malla es una superficie cerrada (cada arista en 2 caras) con normales salientes', () => {
+    P.PIECES.forEach((p) => {
+      const m = P.polycubeMesh(p.cells);
+      const count = new Map();
+      m.faces.forEach((f) => {
+        for (let k = 0; k < 4; k++) {
+          const a = f.idx[k], b = f.idx[(k + 1) % 4];
+          const key = Math.min(a, b) + '-' + Math.max(a, b);
+          count.set(key, (count.get(key) || 0) + 1);
+        }
+        const v = f.idx.map((i) => m.vertices[i]);
+        const n = L.cross(L.sub(v[1], v[0]), L.sub(v[2], v[0]));
+        closeVec(n, f.normal, 1e-12, p.id + ' normal');
+      });
+      count.forEach((c) => assert(c === 2, p.id + ': arista no compartida por 2 caras'));
+      // Teorema de la divergencia: volumen = Σ (centroide·n)·área / 3 = nº de celdas.
+      const vol = m.faces.reduce((s, f) => {
+        const c = f.idx.map((i) => m.vertices[i]).reduce((a, b) => L.add(a, b)).map((x) => x / 4);
+        return s + L.dot(c, f.normal) / 3;
+      }, 0);
+      close(vol, p.cells.length, 1e-9, p.id + ' volumen');
+    });
+  });
+
   function run(log) {
     let pass = 0;
     const failures = [];
