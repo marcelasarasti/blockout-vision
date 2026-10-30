@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Pruebas · Blockout</title>
+  <style>
+    body { background: #070b14; color: #d7e3f7; font: 13px/1.5 "DejaVu Sans Mono", ui-monospace, monospace; padding: 24px; }
+    .ok { color: #69f0ae; } .bad { color: #ff5a5a; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Verificaciones de geometría e integración</h1>
+  <div id="out"></div>
+  <script src="../js/math/linalg.js"></script>
+  <script src="../js/scene/pieces.js"></script>
+  <script src="../js/scene/scene.js"></script>
+  <script src="../js/camera/camera.js"></script>
+  <script src="../js/camera/projection.js"></script>
+  <script src="../js/camera/homography.js"></script>
+  <script src="../js/app/victory.js"></script>
+  <script src="../js/app/demo.js"></script>
+  <script src="tests.js"></script>
+  <script>
+    const out = document.getElementById('out');
+    BO.tests.run((msg, ok) => {
+      const d = document.createElement('div');
+      d.className = ok ? 'ok' : 'bad';
+      d.textContent = msg;
+      out.appendChild(d);
+    });
+  </script>
+</body>
+</html>
