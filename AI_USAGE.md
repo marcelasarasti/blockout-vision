@@ -7,7 +7,7 @@ entregado. Este archivo se actualiza cada vez que se usa un asistente.
 
 | Herramienta | Versión / modelo | Quién la usó | Cuándo |
 |---|---|---|---|
-| Claude (Anthropic), modo agente con terminal y GitHub | Claude Opus 5.5 | _[integrante]_ | 2026‑10‑27 |
+| Claude (Anthropic), modo agente con terminal y GitHub | Claude Opus 5.5 | _[Mar]_ | 2026‑10‑27 |
 
 ## Tareas delegadas
 
