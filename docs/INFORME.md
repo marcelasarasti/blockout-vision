@@ -1,6 +1,6 @@
 # Informe: Blockout desde una cámara móvil
 
-Visión por Computador · Ingeniería Electrónica · UTP · 2026‑II
+Visión por Computador
 
 ## 1. Resumen
 
