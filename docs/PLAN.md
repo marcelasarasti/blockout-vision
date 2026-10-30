@@ -1,8 +1,6 @@
 # Plan de trabajo, cronograma y seguimiento
 
-> **Responsable de seguimiento:** _[nombre del integrante]_ — mantiene este archivo y el tablero al día.
-> Todos los integrantes registran sus avances en la sección 4 al menos una vez por semana.
-> Las fechas son **previstas**: ajústenlas a la fecha oficial de entrega y registren cada ajuste.
+> **Responsable de seguimiento:** _[Mar]
 
 
 
